@@ -13,11 +13,12 @@ class student:
         self.labels = label
         self.weight_label = label[2:]
         self.data = data
-        self.names = [data[label[0]][i] for i in range(len(data[label[0]])) if pd.isnull(data[label[0]][i]) == False ]#check if the name value is nan do not analyze
         self.students_data = data[label]#only the student data
+        self.names = [self.students_data[label[0]][i] for i in range(len(self.students_data[label[0]])) if pd.isnull(self.students_data[label[0]][i]) == False ]#check if the name value is nan do not analyze
         self.weight = self.weight()
-        self.emails = [data[label[1]][i] for i in range(len(data[label[0]])) if pd.isnull(data[label[0]][i]) == False ]
-       
+        self.emails = [self.students_data[label[1]][i] for i in range(len(self.students_data[label[0]])) if pd.isnull(self.students_data[label[0]][i]) == False ]
+        
+        #["Name","Email","HW1","HW2","First","Second","Final","Total Grade"]
         
     def get_weight_label(self):
         return self.weight_label
@@ -28,14 +29,16 @@ class student:
     def get_weight(self):
         return self.weight
     def get_emails(self):
-        return self.emails
+        return  [self.students_data[self.labels[1]][i] for i in range(len(self.students_data[self.labels[0]])) if pd.isnull(self.students_data[self.labels[0]][i]) == False ]
+    def get_HW1(self):
+        return  [self.students_data[self.labels[2]][i] for i in range(len(self.students_data[self.labels[0]])) if pd.isnull(self.students_data[self.labels[0]][i]) == False ]
     
     def set_weight_label(self ,wl):
         self.weight_label = wl
     def set_names(self , n):
         self.names = n
     def set_single_names(self , n,i):
-        self.names[i] = n    
+        self.students_data[self.labels[0]][i] = n    
     def set_students_data(self , sd):
         self.students_data = sd
     def set_weight(self , w):
@@ -43,14 +46,22 @@ class student:
     def set_emails(self , e):
         self.emails = e     
     def set_single_emails(self , e,i):
-        self.emails[i] = e 
+        self.students_data[self.labels[1]][i] = e 
+    def set_single_HW1(self , H1,i):
+        self.students_data[self.labels[2]][i] = H1     
+    
         
-        
-    def submit_list(self,data):
+    
+    def specific_student(self,student_number):
+        return self.students_data[self.students_data["Name"] == self.names[student_number]]
+    
+    
+    def submit_list(self,student_number):
         '''
-        information for single student 
+        return information for single student 
         
         '''
+        data = self.specific_student(student_number)
         student_information = []
         for i in range(len(self.labels)):
             if pd.isnull(data[self.labels[i]].iloc[0]) == False:
@@ -72,12 +83,12 @@ class student:
         return weight_value 
     
     
-    def miss_activites(self,data):
+    def miss_activites(self,s_number):
         '''
         add the student miss activetes if he miss 
 
         '''
-        data = self.submit_list(data)
+        data = self.submit_list(s_number)
       
         miss =[]
         for i in range(len(self.labels)):
@@ -105,12 +116,13 @@ class student:
           return './pie_chart.png'
           
           
-    def student_grades(self,specific_data):
+    def student_grades(self,number):
         '''
         bar chart of the student grades in the course activates as a fraction of the total grade for each activity
         save the chart as image to add to pdf file
         '''
-        student_count =  self.weight 
+        student_count =  self.weight
+        specific_data = self.specific_student(number)
         actual_count = specific_data.iloc[0].iloc[2:]
         x = np.arange(len(self.weight_label))
         width = 0.3
@@ -128,11 +140,12 @@ class student:
         return './bar chart of the student grades.png'
          
   
-    def rank(self,specific_data):
+    def rank(self,number):
          '''
          A chart showing the student his/her rank within the whole class
          
          '''
+         specific_data = self.specific_student(number)
          student_info = specific_data[self.labels[-1]].iloc[0]#total geades
          whole_data = np.sort(self.data[self.labels[-1]][1:])
          rank_number = np.where(whole_data  == student_info)#return array have the student rank number
@@ -223,29 +236,28 @@ def main():
     data = pd.read_excel("grades.xlsx")#read data from excel file
     labels = ["Name","Email","HW1","HW2","First","Second","Final","Total Grade"]#take the main labels from the excel file
     info = student(data, labels)
-    students_data = info.get_students_data()
     names = info.get_names()
     weight_chart = info.course_weight()
     
-    info.set_single_emails("161015@ppu.edu.ps", 3)
+    info.set_single_emails("161015@ppu.edu.ps", 2)
     emails = info.get_emails()
+    
     for i in range(len(names)):#generate pdf file for all student
         #Information for each student individually
-        student_information = students_data[students_data["Name"] == names[i]]
+        # student_information = students_data[students_data["Name"] == names[i]]
         pdf = PDF()
         pdf.add_page()
         #1 Student grades in each of the course activities
-        pdf.pdf_tabel(labels,info.submit_list(student_information))
-        print(info.submit_list(student_information)[1])
+        pdf.pdf_tabel(labels,info.submit_list(i))
         #2 Course activities that the student miss or did not submit
         pdf.titel(" Course activities that the student miss or did not submit :")
-        pdf.pdf_items(info.miss_activites(student_information))
+        pdf.pdf_items(info.miss_activites(i))
         #3A pie chart showing the weights of course
         pdf.pdf_image( weight_chart)
         #4 A graphical representation (bar chart) of the student grades i
-        pdf.pdf_image(info.student_grades(student_information))
+        pdf.pdf_image(info.student_grades(i))
         #5 A chart showing the student his/her rank within the whole class
-        pdf.pdf_image(info.rank(student_information))
+        pdf.pdf_image(info.rank(i))
         #generate the pdf files the file name is the student name 
         pdf.output(names[i]+".pdf", 'F')
         send = email(emails[i])
