@@ -260,8 +260,8 @@ def main():
         pdf.pdf_image(info.rank(i))
         #generate the pdf files the file name is the student name 
         pdf.output(names[i]+".pdf", 'F')
-        send = email(emails[i])
-        send.send_emails(names[i]+".pdf")
+        # send = email(emails[i])
+        # send.send_emails(names[i]+".pdf")
         
             
 main()              
